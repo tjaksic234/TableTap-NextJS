@@ -46,6 +46,9 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
           description: "You have successfully logged in.",
           className: "bg-green-100 border-green-400"
         })
+
+        await new Promise(resolve => setTimeout(resolve, 500))
+
         router.push("/dashboard");
         router.refresh()
       } else {
