@@ -1,7 +1,7 @@
+// app/signup/components/user-signup-form.tsx
 "use client"
 
 import * as React from "react"
-
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,54 +9,55 @@ import { Label } from "@/components/ui/label"
 import { Icons } from "@/app/signin/components/icons"
 import { useToast } from "@/hooks/use-toast"
 import { config } from "@/lib/config"
-import { useRouter } from 'next/navigation'
 
-interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
+interface UserSignUpFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
+export function UserSignUpForm({ className, ...props }: UserSignUpFormProps) {
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
-  const { toast } = useToast();
-  const router = useRouter();
+  const { toast } = useToast()
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault()
     setIsLoading(true)
 
     const formData = new FormData(event.target as HTMLFormElement)
-    const email = formData.get('email') as string
-    const password = formData.get('password') as string
+    const signupData = {
+      firstName: formData.get('firstName'),
+      lastName: formData.get('lastName'),
+      email: formData.get('email'),
+      password: formData.get('password'),
+      phone: formData.get('phone')
+    }
 
     try {
-      const response = await fetch(`${config.apiUrl}/auth/login`, {
+      const response = await fetch(`${config.apiUrl}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+        body: JSON.stringify(signupData),
       })
 
       if (response.ok) {
         const data = await response.json()
-        console.log('Login successful:', data)
+        console.log('Registration successful:', data)
+        
         toast({
           title: "Success!",
-          description: "You have successfully logged in.",
-          className: "bg-green-100 border-green-400"
+          description: "Your account has been created.",
+          className: "bg-green-500 border-green-600 text-white",
         })
-        router.push("/dashboard");
-        router.refresh()
+
+        window.location.href = '/signin'
       } else {
-        throw new Error('Login failed')
-      } 
+        throw new Error('Registration failed')
+      }
       
     } catch (error) {
-      console.error('Login error:', error)
+      console.error('Registration error:', error)
       toast({
         title: "Error",
-        description: "Invalid email or password.",
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       })
     } finally {
@@ -69,6 +70,32 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
       <form onSubmit={onSubmit}>
         <div className="grid gap-4">
           <div className="grid gap-2">
+            <Label htmlFor="firstName">First Name</Label>
+            <Input
+              id="firstName"
+              name="firstName"
+              placeholder="John"
+              type="text"
+              autoCapitalize="none"
+              autoCorrect="off"
+              disabled={isLoading}
+              required
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="lastName">Last Name</Label>
+            <Input
+              id="lastName"
+              name="lastName"
+              placeholder="Doe"
+              type="text"
+              autoCapitalize="none"
+              autoCorrect="off"
+              disabled={isLoading}
+              required
+            />
+          </div>
+          <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
@@ -79,6 +106,20 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               autoComplete="email"
               autoCorrect="off"
               disabled={isLoading}
+              required
+            />
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="phoneNumber">Phone Number</Label>
+            <Input
+              id="phoneNumber"
+              name="phoneNumber"
+              placeholder="+1 (555) 000-0000"
+              type="tel"
+              autoCapitalize="none"
+              autoCorrect="off"
+              disabled={isLoading}
+              required
             />
           </div>
           <div className="grid gap-2">
@@ -88,15 +129,16 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
               name="password"
               type="password"
               autoCapitalize="none"
-              autoComplete="current-password"
+              autoComplete="new-password"
               disabled={isLoading}
+              required
             />
           </div>
           <Button disabled={isLoading}>
             {isLoading && (
               <Icons.spinner className="mr-2 h-4 w-4 animate-spin" />
             )}
-            Sign In
+            Create Account
           </Button>
         </div>
       </form>
