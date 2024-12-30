@@ -8,8 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Icons } from "@/app/signin/components/icons"
 import { useToast } from "@/hooks/use-toast"
-import { config } from "@/lib/config"
 import { useRouter } from 'next/navigation'
+import { signIn, useSession } from "next-auth/react"
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
@@ -17,6 +17,7 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
   const [isLoading, setIsLoading] = React.useState<boolean>(false)
   const { toast } = useToast();
   const router = useRouter();
+  const session = useSession();
 
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault()
@@ -27,39 +28,35 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const password = formData.get('password') as string
 
     try {
-      const response = await fetch(`${config.apiUrl}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      })
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      }) 
 
-      if (response.ok) {
-        const data = await response.json()
-        console.log('Login successful:', data)
+      if (result?.error) {
+        toast({
+          title: "Error",
+          description: "Invalid email or password.",
+          variant: "destructive",
+        })
+      } else {
         toast({
           title: "Success!",
           description: "You have successfully logged in.",
           className: "bg-green-100 border-green-400"
         })
-
-        await new Promise(resolve => setTimeout(resolve, 500))
-
-        router.push("/dashboard");
-        router.refresh()
-      } else {
-        throw new Error('Login failed')
+        console.log(session.data)
+       // await new Promise(resolve => setTimeout(resolve, 500))
+        //router.push("/dashboard")
+        //router.refresh()
       } 
       
     } catch (error) {
       console.error('Login error:', error)
       toast({
         title: "Error",
-        description: "Invalid email or password.",
+        description: "Something went wrong. Please try again.",
         variant: "destructive",
       })
     } finally {
