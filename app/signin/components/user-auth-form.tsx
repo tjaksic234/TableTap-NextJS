@@ -40,16 +40,17 @@ export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
           description: "Invalid email or password.",
           variant: "destructive",
         })
-      } else {
+      } else {  
+
         toast({
           title: "Success!",
           description: "You have successfully logged in.",
           className: "bg-green-100 border-green-400"
         })
-        console.log(session.data)
-       // await new Promise(resolve => setTimeout(resolve, 500))
-        //router.push("/dashboard")
-        //router.refresh()
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        router.push("/dashboard")
+        router.refresh()
       } 
       
     } catch (error) {

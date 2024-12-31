@@ -3,15 +3,20 @@ import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt';
 
 export async function middleware(request: NextRequest) {
-  const token = await getToken({req: request});
-
+  const token = await getToken({ 
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET
+  });
+  
+  const path = request.nextUrl.pathname
+  
   const publicRoutes = ['/signin', '/signup']
-
-  const isPublicRoute = publicRoutes.some(route => 
-    request.nextUrl.pathname.startsWith(route)
+  
+  const isPublicRoute = publicRoutes.some((route) => 
+    path.startsWith(route)
   )
 
-  if (request.nextUrl.pathname === '/') {
+  if (path === '/') {
     return NextResponse.redirect(new URL('/signin', request.url))
   }
 
@@ -20,7 +25,10 @@ export async function middleware(request: NextRequest) {
   }
 
   if (!isPublicRoute && !token) {
-    return NextResponse.redirect(new URL('/signin', request.url))
+    const from = request.nextUrl.pathname
+    const url = new URL('/signin', request.url)
+    url.searchParams.set('from', from)
+    return NextResponse.redirect(url)
   }
 
   return NextResponse.next()
@@ -28,6 +36,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/',
+    '/dashboard/:path*', '/signin', '/signup'
   ]
 }
