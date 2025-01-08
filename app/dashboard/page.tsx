@@ -10,6 +10,7 @@ import { useEffect, useState } from "react"
 import { config } from "@/lib/config"
 import { RestaurantFilter } from "@/app/dashboard/components/restaurant-filter"
 import { useDebounce } from "@/hooks/use-debounce"
+import { useRouter, useSearchParams } from "next/navigation"
 
 const restaurantImages = [
   {
@@ -44,16 +45,50 @@ function getRandomRestaurantImage() {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const { data: session, status } = useSession();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [restaurantImageMap] = useState<Map<string, typeof restaurantImages[0]>>(new Map());
   
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const debouncedSearch = useDebounce(searchQuery, 500); 
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(
+    searchParams.get('type')?.split(',').filter(Boolean) || []
+  );
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>(
+    (searchParams.get('sort') as 'asc' | 'desc') || 'asc'
+  );
+
+  const updateUrl = (newParams: {
+    search?: string;
+    type?: string[];
+    sort?: 'asc' | 'desc';
+  }) => {
+    const params = new URLSearchParams(searchParams);
+    
+    if (newParams.search !== undefined) {
+      if (newParams.search) params.set('search', newParams.search);
+      else params.delete('search');
+    }
+    
+    if (newParams.type !== undefined) {
+      if (newParams.type.length) params.set('type', newParams.type.join(','));
+      else params.delete('type');
+    }
+    
+    if (newParams.sort !== undefined) {
+      if (newParams.sort) params.set('sort', newParams.sort);
+      else params.delete('sort');
+    }
+
+    router.push(`/dashboard?${params.toString()}`, { scroll: false });
+  };
+
+  
 
   useEffect(() => {
     if (restaurants.length > 0) {
@@ -118,10 +153,18 @@ export default function DashboardPage() {
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
+    updateUrl({ search: value });
   };
 
   const handleSort = () => {
-    setSortOrder(current => current === 'asc' ? 'desc' : 'asc');
+    const newSort = sortOrder === 'asc' ? 'desc' : 'asc';
+    setSortOrder(newSort);
+    updateUrl({ sort: newSort });
+  };
+
+  const handleTypeChange = (types: string[]) => {
+    setSelectedTypes(types);
+    updateUrl({ type: types });
   };
 
   if (status === "loading" || loading) {
@@ -159,7 +202,7 @@ export default function DashboardPage() {
         <div className="flex gap-2">
           <RestaurantFilter
             selectedTypes={selectedTypes}
-            onTypeChange={setSelectedTypes}
+            onTypeChange={handleTypeChange}
           />
           <Button 
             variant="outline"
@@ -218,7 +261,15 @@ export default function DashboardPage() {
                 </div>
               </CardContent>
               <CardFooter>
-                <Button className="w-full">Make Reservation</Button>
+              <Button className="w-full"
+                onClick={() => {
+                  const currentParams = new URLSearchParams(searchParams);
+                  const callbackUrl = `/dashboard?${currentParams.toString()}`;
+                  router.push(`/dashboard/${restaurant.id}?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+                }}
+              >
+                Make Reservation
+              </Button>
               </CardFooter>
             </Card>
           );

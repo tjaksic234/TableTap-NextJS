@@ -4,6 +4,7 @@ export interface Point {
   }
   
   export interface Restaurant {
+    id: string;
     name: string;
     description: string;
     cuisineType: string[];
