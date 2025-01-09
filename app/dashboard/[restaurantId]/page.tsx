@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { UsersRound, ArrowLeft } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { useToast } from "@/hooks/use-toast"
 
 export default function RestaurantReservationPage({
  params,
@@ -23,6 +24,41 @@ export default function RestaurantReservationPage({
  const [tables, setTables] = useState<Table[]>([]);
  const [loading, setLoading] = useState(true);
  const [error, setError] = useState<string | null>(null);
+ const [selectedTable, setSelectedTable] = useState<Table | null>(null);
+ const { toast } = useToast()
+
+ const handleReservation = async (reservationData: any) => {
+  try {
+    const response = await fetch(`${config.apiUrl}/reservations/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.accessToken}`,
+      },
+      body: JSON.stringify(reservationData),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to create reservation');
+    }
+
+    toast({
+      title: 'Reservation Confirmed',
+      description: 'Your reservation has been successfully created.',
+      className: "bg-green-100 border-green-400",
+      duration: 3000,
+    });
+
+  } catch (error) {
+    console.error('Error creating reservation:', error);
+    toast({
+      title: 'Error',
+      description: 'Failed to create reservation. Please try again.',
+      variant: "destructive",
+      duration: 3000,
+    });
+  }
+};
 
  const handleBack = () => {
   if (searchParams.callbackUrl) {
@@ -107,15 +143,17 @@ export default function RestaurantReservationPage({
 
  return (
    <div className="flex flex-col min-h-screen">
+     {selectedTable && (
+                <TableReservation
+                  table={selectedTable}
+                  restaurantId={params.restaurantId}
+                  isOpen={!!selectedTable}
+                  onClose={() => setSelectedTable(null)}
+                  onSubmit={handleReservation}
+                  userEmail={session?.user?.email || ''}
+                />
+        )}
      <div className="relative h-[200px] w-full">
-       {/* <Button
-         variant="ghost"
-         size="icon"
-         className="absolute top-4 left-4 z-10 bg-background/50 hover:bg-background/70 backdrop-blur"
-         onClick={() => router.push('/dashboard')}
-       >
-         <ArrowLeft className="h-5 w-5" />
-       </Button> */}
        <Image
          src="/restaurants/restaurant-1.jpg"
          alt={restaurant.name}
@@ -155,9 +193,12 @@ export default function RestaurantReservationPage({
                    {table.minGuests}-{table.maxGuests} Guests
                  </span>
                </div>
-               <Button variant="outline">
-                 Select Time
-               </Button>
+               <Button 
+                  variant="outline"
+                  onClick={() => router.push(`${params.restaurantId}/tables/${table.id}/reserve?minGuests=${table.minGuests}&maxGuests=${table.maxGuests}&callbackUrl=${encodeURIComponent(window.location.href)}`)}
+                >
+                  Select Time
+              </Button>
              </div>
              <div className="text-sm text-muted-foreground">
                Table #{table.id.slice(-4)}
