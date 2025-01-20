@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import { format, addHours } from 'date-fns'
@@ -58,8 +58,15 @@ export default function ReservationPage({ params, searchParams }: ReservationPag
   const [startTime, setStartTime] = useState<string>()
   const [duration, setDuration] = useState("2")
   const [guests, setGuests] = useState(parseInt(searchParams.minGuests))
-  const [email, setEmail] = useState(session?.user?.email || '')
+  const [email, setEmail] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      setEmail(session.user.email)
+    }
+  }, [session?.user?.email])
 
   const handleSubmit = async () => {
     if (!date || !startTime || !email) return
@@ -98,7 +105,6 @@ export default function ReservationPage({ params, searchParams }: ReservationPag
         duration: 3000,
       })
 
-      // Redirect back after successful reservation
       if (searchParams.callbackUrl) {
         router.push(decodeURIComponent(searchParams.callbackUrl))
       } else {
@@ -126,7 +132,6 @@ export default function ReservationPage({ params, searchParams }: ReservationPag
     }
   }
 
-  // Generate array of possible guest numbers between min and max
   const guestOptions = Array.from(
     { length: parseInt(searchParams.maxGuests) - parseInt(searchParams.minGuests) + 1 },
     (_, i) => parseInt(searchParams.minGuests) + i
@@ -163,41 +168,47 @@ export default function ReservationPage({ params, searchParams }: ReservationPag
           </div>
 
           <div className="space-y-2">
-            <Label>Date</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className={cn(
-                    "w-full justify-start text-left font-normal",
-                    !date && "text-muted-foreground"
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "PPP") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date}
-                  onSelect={setDate}
-                  disabled={(date) =>
-                    date < new Date() ||
-                    date > new Date(new Date().setMonth(new Date().getMonth() + 2))
-                  }
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+              <Label>Date</Label>
+              <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "PPP") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={(newDate) => {
+                      setDate(newDate);
+                      setIsCalendarOpen(false);
+                    }}
+                    disabled={(date) =>
+                      date < new Date() ||
+                      date > new Date(new Date().setMonth(new Date().getMonth() + 2))
+                    }
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
           </div>
 
           <div className="space-y-2">
-            <Label>Start Time</Label>
+            <Label className="flex items-center gap-2">
+              Start Time
+              <Clock className="h-4 w-4" />
+            </Label>
             <Select onValueChange={setStartTime}>
               <SelectTrigger>
-                <SelectValue placeholder="Select start time">
-                  <Clock className="mr-2 h-4 w-4" />
+                <SelectValue>
+                  {startTime || "Select start time"}
                 </SelectValue>
               </SelectTrigger>
               <SelectContent>
@@ -225,14 +236,16 @@ export default function ReservationPage({ params, searchParams }: ReservationPag
           </div>
 
           <div className="space-y-2">
-            <Label>Number of Guests</Label>
+            <Label className="flex items-center gap-2">
+              Number of Guests
+              <Users className="h-4 w-4" />
+            </Label>
             <Select 
               value={guests.toString()} 
               onValueChange={(value) => setGuests(parseInt(value))}
             >
               <SelectTrigger>
                 <SelectValue>
-                  <Users className="mr-2 h-4 w-4" />
                   {guests} {guests === 1 ? 'Guest' : 'Guests'}
                 </SelectValue>
               </SelectTrigger>
